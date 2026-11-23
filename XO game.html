@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f172a">
+  <title>P2P · X-O + Chat</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: radial-gradient(circle at 20% 20%, #1e293b, #0f172a 70%);
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.75rem;
+      overflow-x: hidden;
+    }
+    .app {
+      width: 100%;
+      max-width: 480px;
+      background: rgba(30, 41, 59, 0.78);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(148, 163, 184, 0.15);
+      border-radius: 1.75rem;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-height: 96vh;
+    }
+
+    /* ---- Header ---- */
+    .header {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.4);
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      cursor: pointer;
+    }
+    .my-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      font-weight: 700;
+      color: white;
+      overflow: hidden;
+      flex-shrink: 0;
+      border: 2px solid rgba(96, 165, 250, 0.5);
+    }
+    .my-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .header-info {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .my-name {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 120px;
+    }
+    .my-number {
+      font-family: 'SF Mono', ui-monospace, monospace;
+      font-size: 0.65rem;
+      color: #94a3b8;
+    }
+    .my-number b { color: #93c5fd; }
+    .header-actions {
+      display: flex;
+      gap: 0.4rem;
+      align-items: center;
+    }
+    .peer-info {
+      font-size: 0.65rem;
+      color: #86efac;
+      background: rgba(34, 197, 94, 0.1);
+      padding: 0.25rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid rgba(34, 197, 94, 0.25);
+      display: none;
+      font-family: 'SF Mono', ui-monospace, monospace;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .peer-info.visible { display: inline-flex; }
+    .peer-info .initials {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: #22c55e;
+      color: white;
+      font-size: 0.6rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .peer-info b { color: #bbf7d0; }
+
+    /* ---- Tabs ---- */
+    .tabs {
+      display: flex;
+      background: rgba(15, 23, 42, 0.5);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    .tab {
+      flex: 1;
+      padding: 0.7rem 0.2rem;
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #94a3b8;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+      user-select: none;
+      position: relative;
+    }
+    .tab.active {
+      color: #93c5fd;
+      border-bottom-color: #60a5fa;
+      background: rgba(96, 165, 250, 0.08);
+    }
+    .tab .badge-dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #22c55e;
+      margin-left: 0.3rem;
+      animation: pulse 1.6s infinite;
+      vertical-align: middle;
+      position: absolute;
+      top: 0.4rem;
+      right: 0.4rem;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+      70%  { box-shadow: 0 0 0 6px transparent; opacity: 0.9; }
+      100% { box-shadow: 0 0 0 0 transparent; opacity: 1; }
+    }
+
+    /* ---- Panels ---- */
+    .panel { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+    .panel.active { display: flex; }
+
+    /* ---- Game panel ---- */
+    .game-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+      gap: 0.7rem;
+      overflow-y: auto;
+    }
+    .game-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 1rem;
+      padding: 0.6rem 0.9rem;
+      font-size: 0.85rem;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+    }
+    .game-top b { color: #93c5fd; }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+      aspect-ratio: 1 / 1;
+      margin: 0.3rem 0;
+      max-width: 340px;
+      margin-left: auto;
+      margin-right: auto;
+      width: 100%;
+    }
+    .cell {
+      background: rgba(15, 23, 42, 0.65);
+      border-radius: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.4rem;
+      font-weight: 800;
+      color: #cbd5e1;
+      cursor: pointer;
+      box-shadow: 0 5px 0 rgba(0,0,0,0.35), 0 0 0 1px rgba(148,163,184,0.18) inset;
+      transition: transform 0.08s, box-shadow 0.08s, background 0.15s;
+      user-select: none;
+      aspect-ratio: 1 / 1;
+      text-shadow: 0 3px 6px rgba(0,0,0,0.5);
+    }
+    .cell:active { transform: scale(0.96); box-shadow: 0 2px 0 rgba(0,0,0,0.35); }
+    .cell.disabled { cursor: default; opacity: 0.8; }
+    .cell.won {
+      background: rgba(34, 197, 94, 0.2);
+      box-shadow: 0 0 0 2px #4ade80 inset, 0 5px 0 rgba(0,0,0,0.35);
+      color: #bbf7d0;
+    }
+    .game-status {
+      padding: 0.7rem 0.9rem;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 1rem;
+      font-size: 0.83rem;
+      color: #cbd5e1;
+      text-align: center;
+      line-height: 1.35;
+    }
+    .reset-btn {
+      padding: 0.75rem;
+      border-radius: 0.9rem;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: rgba(148, 163, 184, 0.12);
+      color: #cbd5e1;
+      font-weight: 600;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      font-family: inherit;
+    }
+    .reset-btn:active { transform: translateY(2px); }
+    .reset-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Game chat */
+    .game-chat-box {
+      display: flex;
+      flex-direction: column;
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 1rem;
+      overflow: hidden;
+      margin-top: 0.3rem;
+      flex: 1;
+      min-height: 140px;
+      max-height: 220px;
+    }
+    .game-chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.6rem 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      min-height: 0;
+    }
+    .game-chat-msg {
+      background: rgba(51, 65, 85, 0.7);
+      padding: 0.35rem 0.7rem;
+      border-radius: 0.8rem;
+      font-size: 0.78rem;
+      line-height: 1.35;
+      color: #e2e8f0;
+      max-width: 85%;
+      align-self: flex-start;
+      word-break: break-word;
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    .game-chat-msg.self {
+      align-self: flex-end;
+      background: rgba(59, 130, 246, 0.25);
+      border-color: rgba(96, 165, 250, 0.35);
+    }
+    .game-chat-msg.system {
+      align-self: center;
+      background: transparent;
+      color: #64748b;
+      font-size: 0.7rem;
+      font-style: italic;
+      border: none;
+      text-align: center;
+    }
+    .game-chat-input-row {
+      display: flex;
+      gap: 0.3rem;
+      padding: 0.4rem;
+      border-top: 1px solid rgba(148, 163, 184, 0.12);
+      background: rgba(15, 23, 42, 0.6);
+    }
+    .game-chat-input-row input {
+      flex: 1;
+      padding: 0.55rem 0.75rem;
+      border-radius: 0.7rem;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(15, 23, 42, 0.7);
+      color: #e2e8f0;
+      font-size: 0.8rem;
+      outline: none;
+      font-family: inherit;
+      min-width: 0;
+    }
+    .game-chat-input-row input:focus {
+      border-color: #60a5fa;
+      box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.15);
+    }
+    .game-chat-input-row button {
+      width: 38px; height: 38px;
+      border-radius: 0.7rem;
+      border: none;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: white;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.1s;
+    }
+    .game-chat-input-row button:active { transform: scale(0.94); }
+    .game-chat-input-row button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ---- Call panel (Start / Skip) ---- */
+    .call-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      gap: 1rem;
+      text-align: center;
+    }
+    .call-avatar {
+      width: 90px; height: 90px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      box-shadow: 0 10px 30px -8px rgba(99, 102, 241, 0.5);
+      animation: pulse 2s infinite;
+      overflow: hidden;
+    }
+    .call-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .call-number {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      font-family: 'SF Mono', ui-monospace, monospace;
+    }
+    .call-name { font-size: 1rem; color: #93c5fd; font-weight: 600; }
+    .call-state {
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+    .call-actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .call-btn {
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 8px 20px -6px rgba(0,0,0,0.5);
+    }
+    .call-btn:active { transform: scale(0.94); }
+    .call-btn.accept {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: white;
+    }
+    .call-btn.reject {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+    }
+    .call-btn.hangup {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+    }
+    .call-btn.mute {
+      background: rgba(148, 163, 184, 0.2);
+      color: #cbd5e1;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+
+    /* Idle / Start panel */
+    .idle-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.5rem;
+      gap: 1.2rem;
+      text-align: center;
+    }
+    .idle-icon {
+      font-size: 4rem;
+      animation: pulse 2s infinite;
+    }
+    .idle-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+    .idle-desc {
+      font-size: 0.82rem;
+      color: #94a3b8;
+      line-height: 1.6;
+      max-width: 280px;
+    }
+    .start-btn {
+      padding: 1rem 2.5rem;
+      border-radius: 1.2rem;
+      border: none;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: white;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 10px 25px -6px rgba(34, 197, 94, 0.5);
+      font-family: inherit;
+    }
+    .start-btn:active { transform: scale(0.96); }
+    .start-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .skip-btn {
+      padding: 0.75rem 1.8rem;
+      border-radius: 1rem;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: rgba(148, 163, 184, 0.12);
+      color: #cbd5e1;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      font-family: inherit;
+    }
+    .skip-btn:active { transform: scale(0.97); }
+    .skip-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .skip-btn:hover { background: rgba(148, 163, 184, 0.2); }
+
+    /* ---- Status bar ---- */
+    .status-bar {
+      padding: 0.55rem 1rem;
+      background: rgba(15, 23, 42, 0.6);
+      border-top: 1px solid rgba(148, 163, 184, 0.12);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.72rem;
+      color: #94a3b8;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #64748b; flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .dot.connecting { background: #f59e0b; animation: pulse 1.2s infinite; }
+    .dot.connected  { background: #22c55e; animation: pulse 1.6s infinite; }
+    .dot.error      { background: #ef4444; }
+    .dot.searching  { background: #3b82f6; animation: pulse 0.7s infinite; }
+
+    /* ---- Overlays ---- */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+    .overlay.active { display: flex; }
+    .modal-box {
+      background: rgba(30, 41, 59, 0.98);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 1.5rem;
+      padding: 1.6rem 1.4rem;
+      text-align: center;
+      max-width: 360px;
+      width: 100%;
+      box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8);
+      animation: slideUp 0.3s ease-out;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .modal-box h3 {
+      font-size: 1.1rem;
+      color: #e2e8f0;
+      margin-bottom: 1rem;
+    }
+    .modal-box label {
+      display: block;
+      text-align: left;
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-bottom: 0.3rem;
+      letter-spacing: 0.03em;
+    }
+    .modal-box input[type="text"] {
+      width: 100%;
+      padding: 0.8rem 1rem;
+      border-radius: 0.85rem;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: rgba(15, 23, 42, 0.7);
+      color: #e2e8f0;
+      font-size: 1rem;
+      outline: none;
+      transition: border 0.2s, box-shadow 0.2s;
+      margin-bottom: 0.9rem;
+      font-family: inherit;
+    }
+    .modal-box input[type="text"]:focus {
+      border-color: #60a5fa;
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+    }
+    .modal-box input[type="file"] {
+      width: 100%;
+      padding: 0.6rem;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-bottom: 1rem;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 0.6rem;
+      margin-top: 0.5rem;
+    }
+    .modal-actions button {
+      flex: 1;
+      padding: 0.85rem;
+      border-radius: 0.85rem;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, opacity 0.2s;
+      font-family: inherit;
+    }
+    .modal-actions button:active { transform: scale(0.97); }
+    .modal-actions .primary {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: white;
+      box-shadow: 0 8px 16px -6px rgba(99, 102, 241, 0.5);
+    }
+    .modal-actions .secondary {
+      background: rgba(148, 163, 184, 0.15);
+      color: #cbd5e1;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+    }
+
+    /* Profile preview */
+    .profile-preview {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: white;
+      margin: 0 auto 1rem;
+      overflow: hidden;
+      border: 3px solid rgba(96, 165, 250, 0.5);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .profile-preview:hover { transform: scale(1.05); }
+    .profile-preview img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(30, 41, 59, 0.95);
+      color: #e2e8f0;
+      padding: 0.8rem 1.4rem;
+      border-radius: 1rem;
+      font-size: 0.85rem;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      box-shadow: 0 10px 30px -8px rgba(0,0,0,0.6);
+      transition: transform 0.3s ease, opacity 0.3s;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      max-width: 90vw;
+      text-align: center;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 500px) {
+      .app { max-width: 100%; border-radius: 1.2rem; }
+      .tab { font-size: 0.72rem; padding: 0.65rem 0.1rem; }
+      .header-info { max-width: 100px; }
+      .board { max-width: 280px; gap: 7px; }
+      .cell { font-size: 2rem; border-radius: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ---- Profile modal ---- -->
+<div class="overlay" id="profileOverlay">
+  <div class="modal-box">
+    <h3 id="profileTitle">✨ Set up your profile</h3>
+    <div class="profile-preview" id="profilePreview" title="Tap to change picture">?</div>
+    <input type="file" id="profilePictureInput" accept="image/*" style="display:none">
+    <label for="profileNameInput">Your name</label>
+    <input type="text" id="profileNameInput" placeholder="e.g. Mohamed" maxlength="24" autocomplete="off">
+    <div class="modal-actions">
+      <button class="secondary" id="profileCancelBtn">Cancel</button>
+      <button class="primary" id="profileSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ---- Main app ---- -->
+<div class="app" id="mainApp">
+  <div class="header">
+    <div class="header-left" id="headerLeft" title="Edit profile">
+      <div class="my-avatar" id="myAvatar">?</div>
+      <div class="header-info">
+        <div class="my-name" id="myName">Anonymous</div>
+        <div class="my-number" id="myNumberEl" title="Your ID">ID: <b id="myNumberText">—</b></div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span class="peer-info" id="peerInfo"></span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="game">🎮 X-O + Chat</div>
+  </div>
+
+  <!-- ===== SINGLE GAME PANEL ===== -->
+  <div class="panel active" id="panel-game">
+
+    <!-- IDLE / START screen -->
+    <div class="idle-panel" id="idlePanel">
+      <div class="idle-icon">🎮</div>
+      <div class="idle-title">X-O Battle</div>
+      <div class="idle-desc">
+        Press Start to be matched with a random available player.<br>
+        You'll play X-O and chat in real time.
+      </div>
+      <button class="start-btn" id="startBtn">▶ Start</button>
+      <button class="skip-btn" id="skipBtn" style="display:none;">⏭ Skip to next player</button>
+    </div>
+
+    <!-- SEARCHING screen -->
+    <div class="idle-panel hidden" id="searchingPanel">
+      <div class="idle-icon" style="animation:spin 1.2s linear infinite;">🔄</div>
+      <div class="idle-title">Searching for a player…</div>
+      <div class="idle-desc">Looking for an available opponent. This may take a moment.</div>
+      <button class="skip-btn" id="cancelSearchBtn">✕ Cancel</button>
+    </div>
+
+    <!-- ACTIVE GAME screen -->
+    <div class="game-panel hidden" id="gameActivePanel">
+      <div class="game-top">
+        <span>You: <b id="mySymbolLabel">?</b></span>
+        <span>Score: <b id="scoreLabel">0 : 0</b></span>
+        <span>Turn: <b id="turnLabel">—</b></span>
+      </div>
+      <div class="board" id="board"></div>
+      <div class="game-status" id="gameStatus">Connecting…</div>
+      <div style="display:flex;gap:0.5rem;">
+        <button class="reset-btn" id="resetGameBtn" style="flex:1;" disabled>🔄 New round</button>
+        <button class="skip-btn" id="skipGameBtn" style="flex:1;padding:0.75rem;font-size:0.88rem;">⏭ Skip</button>
+      </div>
+
+      <!-- Game chat box -->
+      <div class="game-chat-box">
+        <div class="game-chat-messages" id="gameChatMessages">
+          <div class="game-chat-msg system">Say hi 👋</div>
+        </div>
+        <div class="game-chat-input-row">
+          <input type="text" id="gameChatInput" placeholder="Type a message…" disabled maxlength="200" autocomplete="off">
+          <button id="gameSendBtn" disabled>➤</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="status-bar">
+    <span class="dot" id="dot"></span>
+    <span id="statusText">Idle</span>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+<script>
+(() => {
+  'use strict';
+
+  // ================================================================
+  // DOM
+  // ================================================================
+  const myNumberEl   = document.getElementById('myNumberEl');
+  const myNumberText = document.getElementById('myNumberText');
+  const myNameEl     = document.getElementById('myName');
+  const myAvatarEl   = document.getElementById('myAvatar');
+  const headerLeft   = document.getElementById('headerLeft');
+  const peerInfo     = document.getElementById('peerInfo');
+  const tabs         = document.querySelectorAll('.tab');
+  const panels       = document.querySelectorAll('.panel');
+
+  // Profile modal
+  const profileOverlay      = document.getElementById('profileOverlay');
+  const profileTitle        = document.getElementById('profileTitle');
+  const profilePreview      = document.getElementById('profilePreview');
+  const profilePictureInput = document.getElementById('profilePictureInput');
+  const profileNameInput    = document.getElementById('profileNameInput');
+  const profileSaveBtn      = document.getElementById('profileSaveBtn');
+  const profileCancelBtn    = document.getElementById('profileCancelBtn');
+
+  // Screens
+  const idlePanel        = document.getElementById('idlePanel');
+  const searchingPanel   = document.getElementById('searchingPanel');
+  const gameActivePanel  = document.getElementById('gameActivePanel');
+  const startBtn         = document.getElementById('startBtn');
+  const skipBtn          = document.getElementById('skipBtn');
+  const cancelSearchBtn  = document.getElementById('cancelSearchBtn');
+  const skipGameBtn      = document.getElementById('skipGameBtn');
+
+  // Game
+  const boardEl       = document.getElementById('board');
+  const gameStatusEl  = document.getElementById('gameStatus');
+  const resetGameBtn  = document.getElementById('resetGameBtn');
+  const mySymbolLabel = document.getElementById('mySymbolLabel');
+  const turnLabel     = document.getElementById('turnLabel');
+  const scoreLabel    = document.getElementById('scoreLabel');
+
+  // Game chat
+  const gameChatMessages = document.getElementById('gameChatMessages');
+  const gameChatInput    = document.getElementById('gameChatInput');
+  const gameSendBtn      = document.getElementById('gameSendBtn');
+
+  // Status
+  const dot        = document.getElementById('dot');
+  const statusText = document.getElementById('statusText');
+  const toastEl    = document.getElementById('toast');
+
+  // ================================================================
+  // STATE
+  // ================================================================
+  let peer = null;
+  let dataConn = null;
+  let myNumber = null;
+  let peerNumber = null;
+  let peerProfile = null;
+  let myProfile = { name: 'Anonymous', avatar: null };
+
+  let iAmInitiator = false;
+  let isSearching = false;
+  let isConnected = false;
+  let skipAfterConnect = false; // if true, disconnect then auto-search
+
+  // Game
+  let board = Array(9).fill(null);
+  let currentPlayer = 'X';
+  let gameActive = true;
+  let gameWinner = null;
+  let mySymbol = 'X';
+  let peerSymbol = 'O';
+  let round = 1;
+  let myScore = 0;
+  let peerScore = 0;
+
+  // Timers
+  let searchTimeout = null;
+  let heartbeatInterval = null;
+
+  const ICE_SERVERS = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'turn:openrelay.metered.ca:80',  username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+  ];
+
+  // ================================================================
+  // UTILS
+  // ================================================================
+  const setStatus = (text, cls = '') => {
+    statusText.textContent = text;
+    dot.className = 'dot ' + cls;
+  };
+
+  const showToast = (text, duration = 2500) => {
+    toastEl.textContent = text;
+    toastEl.classList.add('show');
+    clearTimeout(toastEl._t);
+    toastEl._t = setTimeout(() => toastEl.classList.remove('show'), duration);
+  };
+
+  const escapeHtml = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  const getInitials = (name) => {
+    if (!name) return '?';
+    return name.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  };
+
+  const formatTime = (ts) => {
+    const d = ts ? new Date(ts) : new Date();
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // ================================================================
+  // PROFILE
+  // ================================================================
+  const loadProfile = () => {
+    try {
+      const saved = localStorage.getItem('p2p_profile');
+      if (saved) {
+        const p = JSON.parse(saved);
+        if (p && typeof p.name === 'string') myProfile = p;
+      }
+    } catch (e) {}
+  };
+
+  const saveProfile = () => {
+    try { localStorage.setItem('p2p_profile', JSON.stringify(myProfile)); } catch (e) {}
+  };
+
+  const renderMyProfile = () => {
+    myNameEl.textContent = myProfile.name || 'Anonymous';
+    if (myProfile.avatar) {
+      myAvatarEl.innerHTML = `<img src="${myProfile.avatar}" alt="">`;
+    } else {
+      myAvatarEl.textContent = getInitials(myProfile.name);
+    }
+  };
+
+  const openProfileModal = (isFirstTime = false) => {
+    profileTitle.textContent = isFirstTime ? '✨ Set up your profile' : '✏️ Edit profile';
+    profileNameInput.value = myProfile.name === 'Anonymous' ? '' : myProfile.name;
+    if (myProfile.avatar) {
+      profilePreview.innerHTML = `<img src="${myProfile.avatar}" alt="">`;
+    } else {
+      profilePreview.textContent = getInitials(myProfile.name);
+    }
+    profileCancelBtn.style.display = isFirstTime ? 'none' : 'block';
+    profileOverlay.classList.add('active');
+    setTimeout(() => profileNameInput.focus(), 100);
+  };
+
+  const closeProfileModal = () => profileOverlay.classList.remove('active');
+
+  let pendingAvatar = undefined;
+
+  profilePreview.addEventListener('click', () => profilePictureInput.click());
+
+  profilePictureInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      pendingAvatar = reader.result;
+      profilePreview.innerHTML = `<img src="${pendingAvatar}" alt="">`;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  });
+
+  profileSaveBtn.addEventListener('click', () => {
+    const name = profileNameInput.value.trim() || 'Anonymous';
+    myProfile.name = name;
+    if (pendingAvatar !== undefined) {
+      myProfile.avatar = pendingAvatar;
+    }
+    pendingAvatar = undefined;
+    saveProfile();
+    renderMyProfile();
+    closeProfileModal();
+    showToast('✅ Profile saved');
+    if (dataConn && dataConn.open) {
+      sendData({ type: 'profile', name: myProfile.name, avatar: myProfile.avatar });
+    }
+  });
+
+  profileCancelBtn.addEventListener('click', closeProfileModal);
+  headerLeft.addEventListener('click', () => openProfileModal(false));
+
+  // ================================================================
+  // PEERJS — Room-based auto-matchmaking
+  // ================================================================
+  const initPeer = (id) => {
+    if (peer) { try { peer.destroy(); } catch(e){} peer = null; }
+    peer = new Peer(id, {
+      debug: 0,
+      config: { iceServers: ICE_SERVERS }
+    });
+
+    peer.on('open', (openId) => {
+      setStatus('Online · waiting', 'connected');
+      myNumber = openId;
+      myNumberText.textContent = openId;
+    });
+
+    peer.on('connection', (conn) => {
+      // If we're already connected or searching, reject this incoming connection
+      if (isConnected || (dataConn && dataConn.open)) {
+        try { conn.close(); } catch(e){}
+        return;
+      }
+      // Accept incoming connection — we are the receiver (O)
+      peerNumber = conn.peer.replace('xo-', '');
+      iAmInitiator = false;
+      setupDataConn(conn, false);
+    });
+
+    peer.on('error', (err) => {
+      console.warn('Peer error:', err.type, err);
+      if (err.type === 'unavailable-id') {
+        // regenerate ID and re-init
+        const newNum = generateNumber();
+        localStorage.setItem('xo_my_number', newNum);
+        initPeer('xo-' + newNum);
+      } else if (err.type === 'peer-unavailable') {
+        // target busy or gone — silently try next
+        if (isSearching) {
+          // continue searching
+        }
+      } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') {
+        setStatus('Network issue…', 'connecting');
+      }
+    });
+  };
+
+  const generateNumber = () => String(Math.floor(1000 + Math.random() * 9000));
+
+  // ================================================================
+  // DATA CONNECTION
+  // ================================================================
+  const setupDataConn = (conn, initiator) => {
+    // Close any existing connection first
+    if (dataConn && dataConn !== conn) {
+      try { dataConn.close(); } catch(e){}
+    }
+    dataConn = conn;
+    iAmInitiator = initiator;
+    isConnected = false;
+
+    // Assign symbols: initiator = X, receiver = O
+    if (initiator) {
+      mySymbol = 'X';
+      peerSymbol = 'O';
+    } else {
+      mySymbol = 'O';
+      peerSymbol = 'X';
+    }
+    mySymbolLabel.textContent = mySymbol;
+
+    conn.on('open', () => {
+      isConnected = true;
+      isSearching = false;
+      clearTimeout(searchTimeout);
+      setStatus('🟢 In game', 'connected');
+      peerInfo.classList.add('visible');
+
+      // Show game screen
+      showGameScreen();
+
+      // Send my profile
+      sendData({
+        type: 'profile',
+        name: myProfile.name,
+        avatar: myProfile.avatar
+      });
+
+      // Reset game
+      resetGameState();
+      addGameChatMessage(`🟢 Connected! You are ${mySymbol}. ${currentPlayer} starts.`, 'system');
+      showToast('🟢 Player found!');
+
+      // Update peer info placeholder
+      updatePeerInfo();
+
+      // If skip was requested during connection, immediately disconnect and search again
+      if (skipAfterConnect) {
+        skipAfterConnect = false;
+        setTimeout(() => skipPlayer(), 200);
+      }
+    });
+
+    conn.on('data', handleIncomingData);
+
+    conn.on('close', () => {
+      if (isConnected || dataConn === conn) {
+        onPeerDisconnected();
+      }
+    });
+
+    conn.on('error', (err) => {
+      console.warn('DataConn error', err);
+    });
+  };
+
+  const sendData = (obj) => {
+    if (dataConn && dataConn.open) {
+      dataConn.send(JSON.stringify(obj));
+      return true;
+    }
+    return false;
+  };
+
+  // ================================================================
+  // INCOMING DATA
+  // ================================================================
+  const handleIncomingData = (raw) => {
+    let msg;
+    try { msg = JSON.parse(raw); } catch (e) { return; }
+
+    switch (msg.type) {
+      case 'profile':
+        peerProfile = { name: msg.name, avatar: msg.avatar };
+        updatePeerInfo();
+        break;
+
+      case 'chat':
+        addGameChatMessage(msg.text, false);
+        break;
+
+      case 'move':
+        if (msg.symbol === peerSymbol && gameActive && !gameWinner && !board[msg.index]) {
+          makeMove(msg.index, msg.symbol);
+        }
+        break;
+
+      case 'reset':
+        board = Array(9).fill(null);
+        currentPlayer = 'X';
+        gameActive = true;
+        gameWinner = null;
+        round = msg.round || round;
+        renderBoard();
+        addGameChatMessage(`🔄 Peer started round ${round}.`, 'system');
+        break;
+
+      case 'busy':
+        // Peer is busy — try next
+        if (isSearching) {
+          try { dataConn.close(); } catch(e){}
+          dataConn = null;
+          // continue searching automatically
+        }
+        break;
+
+      case 'bye':
+        addGameChatMessage('👋 Peer left the game.', 'system');
+        break;
+    }
+  };
+
+  const updatePeerInfo = () => {
+    if (!peerProfile) {
+      peerInfo.innerHTML = `<span class="initials">?</span> Peer`;
+      peerInfo.classList.add('visible');
+      return;
+    }
+    const name = peerProfile.name || 'Peer';
+    const avatar = peerProfile.avatar;
+    let html = '';
+    if (avatar) {
+      html += `<img src="${avatar}" alt="">`;
+    } else {
+      html += `<span class="initials">${getInitials(name)}</span>`;
+    }
+    html += `<b>${escapeHtml(name)}</b>`;
+    peerInfo.innerHTML = html;
+    peerInfo.classList.add('visible');
+  };
+
+  // ================================================================
+  // DISCONNECT HANDLING
+  // ================================================================
+  const onPeerDisconnected = () => {
+    const wasConnected = isConnected;
+    isConnected = false;
+    dataConn = null;
+    peerNumber = null;
+    peerProfile = null;
+    peerInfo.classList.remove('visible');
+
+    if (wasConnected) {
+      addGameChatMessage('🔌 Peer disconnected.', 'system');
+      showToast('Peer disconnected');
+    }
+
+    // Return to idle (or auto-search if skipAfterConnect is set)
+    if (skipAfterConnect) {
+      skipAfterConnect = false;
+      showSearchingScreen();
+      startSearching();
+    } else {
+      showIdleScreen();
+      setStatus('Idle', '');
+    }
+  };
+
+  // ================================================================
+  // MATCHMAKING — random available player
+  // ================================================================
+  // We use a shared "lobby" Peer ID that everyone tries to claim.
+  // Strategy: each user has their own peer ID (xo-<random>).
+  // To find a random opponent, we use a dedicated "lobby" peer that
+  // broadcasts available users. But simpler: we use PeerJS with a
+  // known "matchmaker" approach:
+  //
+  // 1. Every user registers a "presence" by connecting to a shared
+  //    lobby peer (xo-lobby). The lobby peer collects connected users.
+  // 2. When a user presses Start, they ask the lobby for a random
+  //    available peer ID (not already in a game).
+  // 3. Then they connect directly to that peer.
+  //
+  // This requires a stable lobby peer. Since we can't run a server,
+  // we use a well-known PeerJS ID as the lobby: "xo-lobby-master".
+  // The first user to connect becomes the lobby master (host).
+  // If the master disconnects, another user takes over.
+  //
+  // However, for simplicity and reliability with PeerJS free servers,
+  // we'll implement a lighter approach:
+  //
+  // ALTERNATIVE: Each user tries random IDs in a range until finding
+  // a peer that is online AND not in a game. To know if a peer is
+  // "in a game", the peer answers a "ping" with status "available"
+  // or "busy". We scan a pool of possible IDs (e.g. 1000-9999).
+  //
+  // This is inefficient but works for small numbers of users.
+  //
+  // BETTER: We use a shared "rendezvous" peer ID per time-slot.
+  // Users connect to a rendezvous peer and register. The rendezvous
+  // peer pairs them up.
+  //
+  // For this implementation, we'll use the rendezvous approach with
+  // a well-known ID: "xo-rendezvous". If that peer doesn't exist,
+  // the user becomes the rendezvous (host). The host maintains a
+  // list of available users and pairs them.
+  //
+  // To avoid complexity with host migration, we'll implement a
+  // simpler "scan" approach that works reliably for the demo:
+  //
+  // Each user generates a random 4-digit ID. When searching, they
+  // scan random IDs by attempting peer.connect(). If the target
+  // is online and accepts, it responds with "available" or "busy".
+  // If available, the connection is kept and the game starts.
+  // If busy, the connection is closed and scanning continues.
+  //
+  // The target only accepts a connection if it is currently idle
+  // (not in a game and not searching). This naturally prevents
+  // double-booking.
+  //
+  // This is what we'll implement. It's simple and works.
+
+  const startSearching = () => {
+    if (isSearching) return;
+    if (isConnected) return;
+    isSearching = true;
+    setStatus('🔍 Searching…', 'searching');
+    showSearchingScreen();
+
+    // Start scanning random IDs
+    scanForPlayer();
+  };
+
+  const scanForPlayer = () => {
+    if (!isSearching || isConnected || !peer || peer.destroyed) return;
+
+    // Generate a random target ID (1000-9999), prefixed
+    const targetNum = String(Math.floor(1000 + Math.random() * 9000));
+    const targetId = 'xo-' + targetNum;
+
+    // Don't try to connect to ourselves
+    if (targetId === peer.id) {
+      setTimeout(scanForPlayer, 100);
+      return;
+    }
+
+    let conn;
+    try {
+      conn = peer.connect(targetId, { reliable: true });
+    } catch (e) {
+      setTimeout(scanForPlayer, 300);
+      return;
+    }
+
+    // Set a short timeout: if no response, move on
+    let responded = false;
+    const timeout = setTimeout(() => {
+      if (!responded && conn) {
+        responded = true;
+        try { conn.close(); } catch(e){}
+        if (isSearching && !isConnected) {
+          setTimeout(scanForPlayer, 150);
+        }
+      }
+    }, 2500);
+
+    conn.on('open', () => {
+      if (responded) { try { conn.close(); } catch(e){} return; }
+      responded = true;
+      clearTimeout(timeout);
+
+      // Send a "hello" to check if they're available
+      try {
+        conn.send(JSON.stringify({ type: 'hello', from: peer.id }));
+      } catch (e) {
+        try { conn.close(); } catch(e2){}
+        if (isSearching && !isConnected) setTimeout(scanForPlayer, 150);
+        return;
+      }
+
+      // Wait for a response
+      const responseTimeout = setTimeout(() => {
+        try { conn.close(); } catch(e){}
+        if (isSearching && !isConnected) setTimeout(scanForPlayer, 150);
+      }, 1500);
+
+      const onHelloResponse = (raw) => {
+        let msg;
+        try { msg = JSON.parse(raw); } catch (e) { return; }
+        if (msg.type === 'hello-response') {
+          clearTimeout(responseTimeout);
+          conn.off('data', onHelloResponse);
+
+          if (msg.available) {
+            // Target is available — take over this connection!
+            isSearching = false;
+            clearTimeout(searchTimeout);
+            peerNumber = targetNum;
+            iAmInitiator = true;
+            setupDataConn(conn, true);
+          } else {
+            // Target is busy — close and continue
+            try { conn.close(); } catch(e){}
+            if (isSearching && !isConnected) setTimeout(scanForPlayer, 150);
+          }
+        }
+      };
+
+      conn.on('data', onHelloResponse);
+    });
+
+    conn.on('error', () => {
+      if (!responded) {
+        responded = true;
+        clearTimeout(timeout);
+        if (isSearching && !isConnected) setTimeout(scanForPlayer, 150);
+      }
+    });
+
+    conn.on('close', () => {
+      if (!responded) {
+        responded = true;
+        clearTimeout(timeout);
+        if (isSearching && !isConnected) setTimeout(scanForPlayer, 150);
+      }
+    });
+  };
+
+  // Handle incoming "hello" on an idle peer
+  // We need to listen for connections even when idle.
+  // The peer.on('connection') handler above already accepts incoming
+  // connections. But for the "hello" protocol, the incoming connection
+  // is handled by setupDataConn which assumes it's a game connection.
+  // We need a separate handler for "probe" connections.
+  //
+  // Solution: In peer.on('connection'), we check if we're idle and
+  // the incoming connection sends a "hello". If so, respond with
+  // available status, then either accept (if available) or close.
+  //
+  // Let's modify the peer.on('connection') handler to support this.
+
+  // We'll re-define the connection handler after initPeer.
+  // Actually, let's integrate it into initPeer's connection handler.
+
+  // ----------------------------------------------------------------
+  // The following is the actual connection handler used by PeerJS.
+  // We override the one set in initPeer by re-assigning peer.on.
+  // But since initPeer is called once, we need to include the probe
+  // logic there. Let's patch initPeer to use a smarter handler.
+  // ----------------------------------------------------------------
+
+  // We'll redefine initPeer with probe support.
+  const initPeerWithProbe = (id) => {
+    if (peer) { try { peer.destroy(); } catch(e){} peer = null; }
+    peer = new Peer(id, {
+      debug: 0,
+      config: { iceServers: ICE_SERVERS }
+    });
+
+    peer.on('open', (openId) => {
+      setStatus('Online · waiting', 'connected');
+      myNumber = openId;
+      myNumberText.textContent = openId;
+    });
+
+    peer.on('connection', (conn) => {
+      // First, listen for a potential "hello" probe
+      let isProbe = true;
+      let probeHandled = false;
+
+      const probeTimeout = setTimeout(() => {
+        if (isProbe && !probeHandled) {
+          // No hello received — this is a direct game connection
+          isProbe = false;
+          handleDirectConnection(conn);
+        }
+      }, 800);
+
+      const onProbeData = (raw) => {
+        let msg;
+        try { msg = JSON.parse(raw); } catch (e) { return; }
+        if (msg.type === 'hello' && isProbe) {
+          isProbe = false;
+          probeHandled = true;
+          clearTimeout(probeTimeout);
+          conn.off('data', onProbeData);
+
+          // Determine if we're available (idle and not connected)
+          const available = !isConnected && !dataConn && !isSearching;
+
+          try {
+            conn.send(JSON.stringify({ type: 'hello-response', available }));
+          } catch (e) {}
+
+          if (!available) {
+            // We're busy — close this probe connection
+            setTimeout(() => { try { conn.close(); } catch(e){} }, 100);
+            return;
+          }
+
+          // We're available — accept this connection as a game connection!
+          // The other side will set up the data connection on their end
+          // (they are the initiator). We are the receiver.
+          peerNumber = conn.peer.replace('xo-', '');
+          iAmInitiator = false;
+          setupDataConn(conn, false);
+        }
+      };
+
+      conn.on('data', onProbeData);
+    });
+
+    peer.on('error', (err) => {
+      console.warn('Peer error:', err.type);
+      if (err.type === 'unavailable-id') {
+        const newNum = generateNumber();
+        localStorage.setItem('xo_my_number', newNum);
+        initPeerWithProbe('xo-' + newNum);
+      } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') {
+        setStatus('Network issue…', 'connecting');
+      }
+    });
+  };
+
+  // Handle a direct connection (no hello) — treat as game connection
+  const handleDirectConnection = (conn) => {
+    if (isConnected || (dataConn && dataConn.open)) {
+      try { conn.close(); } catch(e){}
+      return;
+    }
+    peerNumber = conn.peer.replace('xo-', '');
+    iAmInitiator = false;
+    setupDataConn(conn, false);
+  };
+
+  // ================================================================
+  // SCREENS
+  // ================================================================
+  const showIdleScreen = () => {
+    idlePanel.classList.remove('hidden');
+    searchingPanel.classList.add('hidden');
+    gameActivePanel.classList.add('hidden');
+    skipBtn.style.display = 'none';
+  };
+
+  const showSearchingScreen = () => {
+    idlePanel.classList.add('hidden');
+    searchingPanel.classList.remove('hidden');
+    gameActivePanel.classList.add('hidden');
+    skipBtn.style.display = 'none';
+  };
+
+  const showGameScreen = () => {
+    idlePanel.classList.add('hidden');
+    searchingPanel.classList.add('hidden');
+    gameActivePanel.classList.remove('hidden');
+    skipBtn.style.display = 'none';
+  };
+
+  // ================================================================
+  // GAME
+  // ================================================================
+  const resetGameState = () => {
+    board = Array(9).fill(null);
+    currentPlayer = 'X';
+    gameActive = true;
+    gameWinner = null;
+    round = 1;
+    myScore = 0;
+    peerScore = 0;
+    renderBoard();
+    gameChatMessages.innerHTML = '';
+    addGameChatMessage('Say hi 👋', 'system');
+  };
+
+  function renderBoard() {
+    boardEl.innerHTML = '';
+    board.forEach((cell, idx) => {
+      const cellDiv = document.createElement('div');
+      cellDiv.className = 'cell';
+      if (cell === 'X' || cell === 'O') cellDiv.textContent = cell;
+      if (!gameActive || gameWinner || cell) cellDiv.classList.add('disabled');
+      if (gameWinner) cellDiv.classList.add('won');
+      cellDiv.addEventListener('click', () => handleCellClick(idx));
+      boardEl.appendChild(cellDiv);
+    });
+
+    if (gameWinner) {
+      gameStatusEl.textContent = gameWinner === 'draw'
+        ? `🤝 Round ${round} draw!`
+        : `🏆 ${gameWinner} wins round ${round}!`;
+    } else {
+      gameStatusEl.textContent = `${currentPlayer === mySymbol ? 'Your' : "Peer's"} turn (${currentPlayer})`;
+    }
+    turnLabel.textContent = currentPlayer;
+    mySymbolLabel.textContent = mySymbol;
+    scoreLabel.textContent = `${myScore} : ${peerScore}`;
+    resetGameBtn.disabled = !dataConn || !dataConn.open;
+  }
+
+  function checkWinner(b) {
+    const lines = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
+    ];
+    for (const [a,b2,c] of lines) {
+      if (b[a] && b[a] === b[b2] && b[a] === b[c]) return b[a];
+    }
+    return b.every(c => c !== null) ? 'draw' : null;
+  }
+
+  function handleCellClick(index) {
+    if (!gameActive || gameWinner || board[index]) return;
+    if (!dataConn || !dataConn.open) { showToast('Not connected'); return; }
+    if (currentPlayer !== mySymbol) { showToast(`It's peer's turn (${currentPlayer})`); return; }
+    makeMove(index, mySymbol);
+    sendData({ type: 'move', index, symbol: mySymbol });
+  }
+
+  function makeMove(index, symbol) {
+    if (!gameActive || gameWinner || board[index]) return;
+    board[index] = symbol;
+    const winner = checkWinner(board);
+    if (winner) {
+      gameActive = false;
+      gameWinner = winner;
+      if (winner === 'draw') addGameChatMessage(`🤝 Round ${round} draw.`, 'system');
+      else {
+        if (winner === mySymbol) { myScore++; addGameChatMessage(`🎉 You won round ${round}!`, 'system'); }
+        else { peerScore++; addGameChatMessage(`😔 Peer won round ${round}.`, 'system'); }
+      }
+    } else {
+      currentPlayer = (symbol === 'X' ? 'O' : 'X');
+    }
+    renderBoard();
+  }
+
+  resetGameBtn.addEventListener('click', () => {
+    if (!dataConn || !dataConn.open) return;
+    board = Array(9).fill(null);
+    currentPlayer = 'X';
+    gameActive = true;
+    gameWinner = null;
+    round++;
+    renderBoard();
+    sendData({ type: 'reset', round });
+    addGameChatMessage(`🔄 Round ${round} started.`, 'system');
+  });
+
+  // ================================================================
+  // GAME CHAT
+  // ================================================================
+  const addGameChatMessage = (text, type = 'peer') => {
+    const div = document.createElement('div');
+    div.className = 'game-chat-msg' + (type === 'self' ? ' self' : type === 'system' ? ' system' : '');
+    div.textContent = text;
+    gameChatMessages.appendChild(div);
+    gameChatMessages.scrollTop = gameChatMessages.scrollHeight;
+  };
+
+  const sendGameChat = () => {
+    const text = gameChatInput.value.trim();
+    if (!text) return;
+    if (!dataConn || !dataConn.open) { showToast('Not connected'); return; }
+    addGameChatMessage(text, 'self');
+    sendData({ type: 'chat', text });
+    gameChatInput.value = '';
+  };
+
+  gameSendBtn.addEventListener('click', sendGameChat);
+  gameChatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendGameChat(); });
+
+  // ================================================================
+  // SKIP
+  // ================================================================
+  const skipPlayer = () => {
+    if (!isConnected && !dataConn) {
+      // If searching, just cancel
+      if (isSearching) {
+        isSearching = false;
+        clearTimeout(searchTimeout);
+        showIdleScreen();
+        setStatus('Idle', '');
+      }
+      return;
+    }
+
+    // If connected, notify peer and disconnect
+    if (dataConn && dataConn.open) {
+      try { sendData({ type: 'bye' }); } catch(e){}
+      try { dataConn.close(); } catch(e){}
+    }
+    dataConn = null;
+    peerNumber = null;
+    peerProfile = null;
+    isConnected = false;
+    peerInfo.classList.remove('visible');
+
+    // Now start searching for a new player
+    showSearchingScreen();
+    isSearching = true;
+    setStatus('🔍 Searching…', 'searching');
+    setTimeout(() => scanForPlayer(), 300);
+  };
+
+  // ================================================================
+  // BUTTON EVENTS
+  // ================================================================
+  startBtn.addEventListener('click', () => {
+    if (isConnected || isSearching) return;
+    // Ensure we have a peer
+    if (!peer || peer.destroyed) {
+      showToast('Connecting to server…');
+      return;
+    }
+    startSearching();
+  });
+
+  skipBtn.addEventListener('click', () => {
+    if (isConnected) {
+      skipPlayer();
+    } else if (isSearching) {
+      isSearching = false;
+      clearTimeout(searchTimeout);
+      showIdleScreen();
+      setStatus('Idle', '');
+    }
+  });
+
+  cancelSearchBtn.addEventListener('click', () => {
+    isSearching = false;
+    clearTimeout(searchTimeout);
+    showIdleScreen();
+    setStatus('Idle', '');
+  });
+
+  skipGameBtn.addEventListener('click', () => {
+    if (isConnected) {
+      skipPlayer();
+    }
+  });
+
+  // ================================================================
+  // INIT
+  // ================================================================
+  const init = async () => {
+    // Load / generate number
+    let saved = localStorage.getItem('xo_my_number');
+    let num;
+    if (saved && /^\d{4}$/.test(saved)) num = saved;
+    else {
+      num = generateNumber();
+      localStorage.setItem('xo_my_number', num);
+    }
+    myNumberText.textContent = num;
+
+    myNumberEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      navigator.clipboard?.writeText(myNumber || num).then(
+        () => showToast('📋 ID copied'),
+        () => showToast('Your ID: ' + (myNumber || num))
+      );
+    });
+
+    // Load profile
+    loadProfile();
+    renderMyProfile();
+
+    // If first time, show modal
+    if (!localStorage.getItem('p2p_profile')) {
+      openProfileModal(true);
+    }
+
+    // Init peer with probe support
+    initPeerWithProbe('xo-' + num);
+
+    // Set initial screen
+    showIdleScreen();
+    setStatus('Connecting…', 'connecting');
+
+    // After peer is ready, set status
+    const checkPeerReady = setInterval(() => {
+      if (peer && peer.id && !peer.destroyed) {
+        clearInterval(checkPeerReady);
+        setStatus('Online · ready', 'connected');
+      }
+    }, 500);
+
+    // Cleanup on unload
+    window.addEventListener('beforeunload', () => {
+      if (dataConn && dataConn.open) {
+        try { dataConn.send(JSON.stringify({ type: 'bye' })); } catch(e){}
+        try { dataConn.close(); } catch(e){}
+      }
+      if (peer) { try { peer.destroy(); } catch(e){} }
+    });
+  };
+
+  init();
+})();
+</script>
+</body>
+</html>
